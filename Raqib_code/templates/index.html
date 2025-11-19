@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2 style="text-align: center; margin-bottom: 30px; color: #2c3e50;">Upload Video for Analysis</h2>
+    
+    <form id="uploadForm" method="POST" action="{{ url_for('upload_video') }}" enctype="multipart/form-data">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h3>Click to upload or drag and drop</h3>
+            <p>Supported formats: MP4, AVI, MOV, MKV, WEBM (Max 100MB)</p>
+            <input type="file" id="videoFile" name="video_file" class="file-input" accept="video/*">
+            
+            <div class="file-info">
+                <strong>Selected file:</strong> <span id="fileName">No file selected</span><br>
+                <strong>File size:</strong> <span id="fileSize">-</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="createOutput" name="create_output" value="true">
+                <label for="createOutput">Generate annotated output video</label>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="detailedAnalysis" name="detailed_analysis" value="true" checked>
+                <label for="detailedAnalysis">Enable detailed frame-by-frame analysis</label>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <button type="submit" id="submitBtn" class="btn btn-success" disabled>
+                🚀 Analyze Video
+            </button>
+        </div>
+    </form>
+
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <h3>Analyzing Video...</h3>
+        <p>This may take a few minutes depending on video length</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📊 What We Analyze</h3>
+    <div class="results-grid">
+        <div class="metric-card">
+            <div class="metric-label">Liveness Detection</div>
+            <div class="metric-value">✓</div>
+            <p>Anti-spoofing through blink detection</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Emotion Analysis</div>
+            <div class="metric-value">😊</div>
+            <p>Facial expression recognition</p>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Confidence Score</div>
+            <div class="metric-value">%</div>
+            <p>Overall authenticity assessment</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
