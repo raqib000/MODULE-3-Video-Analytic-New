@@ -1,1 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Upload</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="upload-card">
+            <h1 class="title">🎥 Video Upload</h1>
+            <p class="subtitle">Upload your video file for analysis</p>
+            
+            <!-- Error Alert -->
+            <div id="errorAlert" class="alert error"></div>
+            
+            <!-- Success Alert -->
+            <div id="successAlert" class="alert success"></div>
+            
+            <!-- Upload Area -->
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    <h3>Select a video file</h3>
+                    <p>Click to browse or drag and drop your video here</p>
+                    <button class="browse-btn" onclick="document.getElementById('videoFile').click()">
+                        Choose File
+                    </button>
+                </div>
+                <input type="file" id="videoFile" class="file-input" accept="video/*">
+            </div>
+            
+            <!-- File Info -->
+            <div id="fileInfo" class="file-info">
+                <div class="file-name" id="fileName">No file selected</div>
+                <div class="file-size" id="fileSize">-</div>
+            </div>
+            
+            <!-- Upload Button -->
+            <button id="uploadBtn" class="upload-btn" disabled>
+                📤 Upload Video
+            </button>
+            
+            <!-- Loading Indicator -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Uploading video...</p>
+            </div>
+            
+            <!-- Supported Formats -->
+            <div class="supported-formats">
+                <h4>Supported video formats:</h4>
+                <div class="format-tags">
+                    <span class="format-tag">MP4</span>
+                    <span class="format-tag">AVI</span>
+                    <span class="format-tag">MOV</span>
+                    <span class="format-tag">MKV</span>
+                    <span class="format-tag">WEBM</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        class VideoUploader {
+            constructor() {
+                this.selectedFile = null;
+                this.initializeEventListeners();
+            }
+
+            initializeEventListeners() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('videoFile');
+                const uploadBtn = document.getElementById('uploadBtn');
+
+                // Click to select file
+                uploadArea.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                // File input change
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleFileSelection(e.target.files[0]);
+                    }
+                });
+
+                // Drag and drop
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.handleFileSelection(files[0]);
+                    }
+                });
+
+                // Upload button
+                uploadBtn.addEventListener('click', () => {
+                    this.uploadFile();
+                });
+            }
+
+            handleFileSelection(file) {
+                this.hideAlerts();
+
+                // Validate file type
+                const allowedTypes = ['mp4', 'avi', 'mov', 'mkv', 'webm'];
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                if (!allowedTypes.includes(fileExtension)) {
+                    this.showError(`Invalid file type: .${fileExtension}. Please select a video file.`);
+                    this.resetFileSelection();
+                    return;
+                }
+
+                // Validate file size (100MB)
+                const maxSize = 100 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    this.showError('File too large. Maximum size is 100MB.');
+                    this.resetFileSelection();
+                    return;
+                }
+
+                // Store file and update UI
+                this.selectedFile = file;
+                this.updateFileInfo(file);
+                this.enableUploadButton();
+            }
+
+            updateFileInfo(file) {
+                const fileInfo = document.getElementById('fileInfo');
+                const fileName = document.getElementById('fileName');
+                const fileSize = document.getElementById('fileSize');
+                const uploadArea = document.getElementById('uploadArea');
+
+                fileName.textContent = file.name;
+                fileSize.textContent = this.formatFileSize(file.size);
+                
+                fileInfo.classList.add('visible');
+                uploadArea.style.borderColor = '#48bb78';
+                uploadArea.style.background = '#f0fff4';
+            }
+
+            enableUploadButton() {
+                const uploadBtn = document.getElementById('uploadBtn');
+                uploadBtn.disabled = false;
+                uploadBtn.classList.add('visible');
+            }
+
+            async uploadFile() {
+                if (!this.selectedFile) {
+                    this.showError('No file selected.');
+                    return;
+                }
+
+                const uploadBtn = document.getElementById('uploadBtn');
+                const loading = document.getElementById('loading');
+                
+                // Show loading state
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+                loading.classList.add('visible');
+                this.hideAlerts();
+
+                try {
+                    const formData = new FormData();
+                    formData.append('video_file', this.selectedFile);
+
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        this.showSuccess(result.message);
+                        if (result.file_info) {
+                            this.displayFileInfo(result.file_info);
+                        }
+                        this.resetFileSelection();
+                    } else {
+                        this.showError(result.error || 'Upload failed. Please try again.');
+                    }
+
+                } catch (error) {
+                    this.showError('Network error. Please check your connection and try again.');
+                } finally {
+                    // Reset UI
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = '📤 Upload Video';
+                    loading.classList.remove('visible');
+                }
+            }
+
+            displayFileInfo(fileInfo) {
+                const successAlert = document.getElementById('successAlert');
+                successAlert.innerHTML = `
+                    <strong>✅ Upload successful!</strong><br>
+                    File: ${fileInfo.original_name}<br>
+                    Size: ${fileInfo.size_formatted}<br>
+                    Time: ${fileInfo.upload_time}
+                `;
+            }
+
+            resetFileSelection() {
+                this.selectedFile = null;
+                
+                const fileInput = document.getElementById('videoFile');
+                const fileInfo = document.getElementById('fileInfo');
+                const uploadBtn = document.getElementById('uploadBtn');
+                const uploadArea = document.getElementById('uploadArea');
+
+                fileInput.value = '';
+                fileInfo.classList.remove('visible');
+                uploadBtn.disabled = true;
+                uploadBtn.classList.remove('visible');
+                uploadArea.style.borderColor = '#cbd5e0';
+                uploadArea.style.background = '#f7fafc';
+            }
+
+            showError(message) {
+                const errorAlert = document.getElementById('errorAlert');
+                errorAlert.textContent = message;
+                errorAlert.classList.add('visible');
+            }
+
+            showSuccess(message) {
+                const successAlert = document.getElementById('successAlert');
+                successAlert.textContent = message;
+                successAlert.classList.add('visible');
+            }
+
+            hideError() {
+                const errorAlert = document.getElementById('errorAlert');
+                errorAlert.classList.remove('visible');
+            }
+
+            hideSuccess() {
+                const successAlert = document.getElementById('successAlert');
+                successAlert.classList.remove('visible');
+            }
+
+            hideAlerts() {
+                this.hideError();
+                this.hideSuccess();
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VideoUploader();
+        });
+    </script>
+</body>
+</html>
