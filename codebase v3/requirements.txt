@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-python-multipart
-supabase
-google-generativeai
-ffmpeg-python
-python-dotenv
-librosa
-soundfile
